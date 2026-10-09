@@ -1,0 +1,12 @@
+# Security.txt for NeuroLab
+# https://securitytxt.org/
+
+Contact: mailto:security@neurolab.example.com
+Contact: https://neurolab.example.com/security
+Expires: 2027-12-31T23:59:59.000Z
+Encryption: https://neurolab.example.com/.well-known/pgp-key.txt
+Acknowledgments: https://neurolab.example.com/security/hall-of-fame
+Preferred-Languages: en
+Canonical: https://neurolab.example.com/.well-known/security.txt
+Policy: https://neurolab.example.com/security/policy
+Hiring: https://neurolab.example.com/careers
