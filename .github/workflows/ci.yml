@@ -1,0 +1,245 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main, master]
+    tags: ['v*']
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    name: Backend checks
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: packages/backend
+    env:
+      UV_PYTHON: '3.14'
+      DATABASE_URL: postgresql://neurolab:neurolab@localhost:5432/neurolab_test
+      APP_ENV: test
+      AUTH_MODE: development
+    services:
+      postgres:
+        image: postgres:18-alpine
+        env:
+          POSTGRES_USER: neurolab
+          POSTGRES_PASSWORD: neurolab
+          POSTGRES_DB: neurolab_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U neurolab -d neurolab_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+    steps:
+      - uses: actions/checkout@v7.0.1
+
+      - uses: astral-sh/setup-uv@v10.3.0
+        with:
+          python-version: '3.14'
+          enable-cache: true
+
+      - name: Install dependencies
+        run: uv sync --all-groups
+
+      - name: Ruff format check
+        run: uv run ruff format --check .
+
+      - name: Ruff lint
+        run: uv run ruff check .
+
+      - name: Mypy
+        run: uv run mypy .
+
+      - name: Apply migrations to a fresh database
+        run: uv run python -m app.db.migrations upgrade
+
+      - name: Pytest
+        run: uv run pytest -q --cov=app --cov-report=term-missing
+
+      - name: Python dependency audit (pip-audit)
+        run: uv run pip-audit --desc --format=json --output=pip-audit.json || true
+      - name: Upload pip-audit results
+        uses: actions/upload-artifact@v7.0.2
+        with:
+          name: pip-audit-results
+          path: packages/backend/pip-audit.json
+          retention-days: 30
+
+  frontend:
+    name: Frontend checks
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: packages/frontend
+    steps:
+      - uses: actions/checkout@v7.0.1
+
+      - uses: actions/setup-node@v7.1.0
+        with:
+          node-version-file: .nvmrc
+
+      - name: Enable pnpm
+        uses: pnpm/action-setup@v6.1.0
+        with:
+          version: 12.11.2
+
+      - name: Check frontend presence
+        id: frontend
+        run: |
+          if [ -f package.json ]; then
+            echo "present=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "present=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Install dependencies
+        if: steps.frontend.outputs.present == 'true'
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint
+        if: steps.frontend.outputs.present == 'true'
+        run: pnpm lint && pnpm format:check
+
+      - name: Type check
+        if: steps.frontend.outputs.present == 'true'
+        run: pnpm typecheck
+
+      - name: Unit tests
+        if: steps.frontend.outputs.present == 'true'
+        run: pnpm test
+
+      - name: Build
+        if: steps.frontend.outputs.present == 'true'
+        run: pnpm build
+
+      - name: Node dependency audit (npm audit)
+        if: steps.frontend.outputs.present == 'true'
+        run: pnpm audit --json --output=npm-audit.json || true
+      - name: Upload npm audit results
+        if: steps.frontend.outputs.present == 'true'
+        uses: actions/upload-artifact@v7.0.2
+        with:
+          name: npm-audit-results
+          path: packages/frontend/npm-audit.json
+          retention-days: 30
+
+  frontend-e2e:
+    name: Frontend end-to-end
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: packages/frontend
+    steps:
+      - uses: actions/checkout@v7.0.1
+
+      - uses: actions/setup-node@v7.1.0
+        with:
+          node-version-file: .nvmrc
+
+      - name: Enable pnpm
+        uses: pnpm/action-setup@v6.1.0
+        with:
+          version: 12.11.2
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Playwright browsers
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Playwright smoke tests
+        run: pnpm test:e2e
+
+  security:
+    name: Security scan
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v7.0.1
+
+      - name: Run Trivy vulnerability scanner (filesystem)
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+          severity: 'CRITICAL,HIGH,MEDIUM'
+          ignore-unfixed: true
+
+      - name: Upload Trivy results to GitHub Security
+        uses: github/codeql-action/upload-sarif@v4.38.3
+        with:
+          sarif_file: 'trivy-results.sarif'
+
+  release:
+    name: Release (Tauri)
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    needs: [backend, frontend, frontend-e2e, security]
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, ubuntu-latest, windows-latest]
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7.0.1
+
+      - name: Setup Node
+        uses: actions/setup-node@v7.1.0
+        with:
+          node-version-file: packages/frontend/.nvmrc
+
+      - name: Enable pnpm
+        uses: pnpm/action-setup@v6.1.0
+        with:
+          version: 12.11.2
+
+      - name: Install frontend dependencies
+        working-directory: packages/frontend
+        run: pnpm install --frozen-lockfile
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.os == 'windows-latest' && 'x86_64-pc-windows-msvc' || matrix.os == 'macos-latest' && 'x86_64-apple-darwin,aarch64-apple-darwin' || 'x86_64-unknown-linux-gnu' }}
+
+      - name: Rust cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          workdir: packages/frontend/src-tauri
+
+      - name: Install system dependencies (Linux)
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev patchelf
+
+      - name: Install system dependencies (macOS)
+        if: matrix.os == 'macos-latest'
+        run: |
+          brew install webkit2gtk
+
+      - name: Build Tauri application
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PASSWORD: ${{ secrets.TAURI_SIGNING_PASSWORD }}
+        with:
+          workingDirectory: packages/frontend
+          tagName: ${{ github.ref_name }}
+          releaseName: 'NeuroLab ${{ github.ref_name }}'
+          releaseBody: 'See the changelog for details.'
+          releaseDraft: false
+          prerelease: false
+          args: --verbose
