@@ -1,0 +1,31 @@
+{
+  "name": "neurolab",
+  "private": true,
+  "packageManager": "pnpm@11.7.0",
+  "engines": {
+    "node": ">=26.0.0"
+  },
+  "scripts": {
+    "dev": "pnpm --filter @neurolab/web dev",
+    "build": "pnpm --filter @neurolab/web build",
+    "lint": "pnpm --filter @neurolab/web lint",
+    "typecheck": "pnpm --filter @neurolab/web typecheck",
+    "test": "pnpm --filter @neurolab/web test",
+    "test:e2e": "pnpm --filter @neurolab/web test:e2e",
+    "prepare": "husky"
+  },
+  "devDependencies": {
+    "husky": "^9.1.7",
+    "lint-staged": "^17.6.0"
+  },
+  "lint-staged": {
+    "packages/backend/**/*.py": [
+      "uv run --directory packages/backend ruff check --fix",
+      "uv run --directory packages/backend ruff format"
+    ],
+    "packages/frontend/**/*.{js,jsx,ts,tsx}": [
+      "pnpm --dir packages/frontend exec eslint --fix",
+      "pnpm --dir packages/frontend exec prettier --write"
+    ]
+  }
+}
