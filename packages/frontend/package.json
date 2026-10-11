@@ -21,7 +21,7 @@
     "@trpc/server": "^11.19.0",
     "@types/plotly.js": "^2.35.18",
     "next": "16.4.0",
-    "plotly.js-dist": "^2.35.3",
+    "plotly.js-dist": "^4.0.0",
     "react": "19.3.0",
     "react-dom": "19.3.0",
     "server-only": "^0.0.1",
