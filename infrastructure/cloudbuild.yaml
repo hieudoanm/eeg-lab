@@ -122,7 +122,7 @@ steps:
         uv run pytest -q
 
   # Frontend tests
-  - name: 'node:20-slim'
+  - name: 'node:24-slim'
     id: 'frontend-tests'
     entrypoint: 'bash'
     args:
