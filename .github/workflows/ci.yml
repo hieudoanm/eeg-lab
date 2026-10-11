@@ -64,7 +64,7 @@ jobs:
       - name: Python dependency audit (pip-audit)
         run: uv run pip-audit --desc --format=json --output=pip-audit.json || true
       - name: Upload pip-audit results
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: pip-audit-results
           path: packages/backend/pip-audit.json
@@ -122,7 +122,7 @@ jobs:
         run: pnpm audit --json --output=npm-audit.json || true
       - name: Upload npm audit results
         if: steps.frontend.outputs.present == 'true'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: npm-audit-results
           path: packages/frontend/npm-audit.json
