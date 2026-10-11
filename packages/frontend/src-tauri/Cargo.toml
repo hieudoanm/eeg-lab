@@ -28,5 +28,5 @@ tauri-plugin-dialog = "=2.8.2"
 tauri-plugin-notification = "=2.6.0"
 tokio = { version = "=1.53.2", features = ["full"] }
 axum = "=0.7.9"
-tower-http = { version = "=0.6.11", features = ["fs"] }
+tower-http = { version = "=0.7.1", features = ["fs"] }
 mime_guess = "=2.0.5"
