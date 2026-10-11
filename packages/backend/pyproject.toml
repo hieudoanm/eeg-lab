@@ -3,7 +3,7 @@ name = "neurolab-api"
 version = "0.1.0"
 description = "NeuroLab REST API and background analysis worker"
 readme = "README.md"
-requires-python = ">=3.12,<3.13"
+requires-python = ">=3.14,<3.15"
 dependencies = [
     "celery[redis]>=5.4",
     "fastapi>=0.115",

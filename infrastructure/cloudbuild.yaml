@@ -110,7 +110,7 @@ steps:
   # ---------------------------------------------------------------------------
 
   # Backend tests
-  - name: 'python:3.12-slim'
+  - name: 'python:3.14-slim'
     id: 'backend-tests'
     entrypoint: 'bash'
     args:
@@ -225,7 +225,7 @@ steps:
   # Smoke tests against deployed dev environment
   # ---------------------------------------------------------------------------
 
-  - name: 'python:3.12-slim'
+  - name: 'python:3.14-slim'
     id: 'smoke-tests-dev'
     entrypoint: 'bash'
     args:
