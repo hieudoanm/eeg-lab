@@ -96,7 +96,7 @@ jobs:
           node-version-file: '${{ env.NODE_VERSION_FILE }}'
 
       - name: Cache pnpm store
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: ~/.local/share/pnpm/store
           key: ${{ runner.os }}-pnpm-${{ hashFiles('packages/frontend/pnpm-lock.yaml') }}
@@ -148,7 +148,7 @@ jobs:
           node-version-file: '${{ env.NODE_VERSION_FILE }}'
 
       - name: Cache pnpm store
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: ~/.local/share/pnpm/store
           key: ${{ runner.os }}-pnpm-${{ hashFiles('packages/frontend/pnpm-lock.yaml') }}
@@ -226,7 +226,7 @@ jobs:
           node-version-file: '${{ env.NODE_VERSION_FILE }}'
 
       - name: Cache pnpm store
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: ~/.local/share/pnpm/store
           key: ${{ runner.os }}-pnpm-${{ hashFiles('packages/frontend/pnpm-lock.yaml') }}
